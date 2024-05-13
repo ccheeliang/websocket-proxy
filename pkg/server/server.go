@@ -1,4 +1,4 @@
-package websocketclient
+package server
 
 import (
 	"crypto/tls"
@@ -17,6 +17,8 @@ import (
 type PublishMessage struct {
 	Data string `json:"data"`
 }
+
+var messageChannel = make(chan []byte) // Channel to send data to the WebSocket server
 
 func NewWebSocketProxy(wsUrl *url.URL) http.HandlerFunc {
 	// Create a reverse proxy director
@@ -43,6 +45,21 @@ func NewWebSocketProxy(wsUrl *url.URL) http.HandlerFunc {
 	}
 }
 
+func writeMessageToWebsocket(serverConn *websocket.Conn) {
+	for {
+		msg, ok := <-messageChannel
+		if ok {
+			// Forward message to WebSocket server
+			err := serverConn.WriteMessage(websocket.TextMessage, msg)
+			if err != nil {
+				log.Println("Error broadcasting message to WebSocket server:", err)
+				break
+			}
+		}
+	}
+}
+
+// Start my server instance
 func StartServer(port, wsServerUrl string) {
 	log.Printf("Client listen and serve at %s\n", port)
 
@@ -53,12 +70,15 @@ func StartServer(port, wsServerUrl string) {
 	}
 
 	// Establish a WebSocket connection to the WebSocket server
-	// to be use for publishing data from server instance to the websocket server.
+	// to be use for publishing data to the websocket server.
 	websocketConn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/ws", wsUrl.Host), nil)
 	if err != nil {
 		log.Fatal("WebSocket dial:", err)
 	}
 	defer websocketConn.Close()
+
+	// write message to the main websocket server in order to broadcast message to all other server instances.
+	go writeMessageToWebsocket(websocketConn)
 
 	wsProxy := NewWebSocketProxy(wsUrl)
 
@@ -77,12 +97,7 @@ func StartServer(port, wsServerUrl string) {
 
 		fmt.Println("Writing data: ", data.Data)
 
-		err = websocketConn.WriteMessage(websocket.TextMessage, []byte(data.Data))
-		if err != nil {
-			log.Println("Error broadcasting message to WebSocket server:", err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
+		messageChannel <- []byte(data.Data) // forwading message to websocket server
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "OK",

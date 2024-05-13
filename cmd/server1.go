@@ -6,13 +6,13 @@ package cmd
 import (
 	"fmt"
 
-	websocketclient "github.com/ccheeliang/websocket-proxy/pkg/websocket_client"
+	server "github.com/ccheeliang/websocket-proxy/pkg/server"
 	"github.com/spf13/cobra"
 )
 
 // client1Cmd represents the client1 command
 var client1Cmd = &cobra.Command{
-	Use:   "client1",
+	Use:   "server1",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -21,8 +21,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("client1 called")
-		websocketclient.StartServer("12338", "http://localhost:12440/ws")
+		fmt.Println("Starting server instance 1")
+		server.StartServer("12338", "http://localhost:12440/ws")
 	},
 }
 

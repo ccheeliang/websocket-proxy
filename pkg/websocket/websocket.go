@@ -1,4 +1,4 @@
-package websocketserver
+package websocket
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func StartWebsocketServer() *Websocket {
 		Broadcast: make(chan []byte),
 	}
 
-	go ws.handleMessages()
+	go ws.broadcastMessageToClients()
 
 	return ws
 }
@@ -67,13 +67,11 @@ func (ws *Websocket) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ws *Websocket) handleMessages() {
+func (ws *Websocket) broadcastMessageToClients() {
 	for {
 		select {
 		case msg := <-ws.Broadcast:
-			log.Println("here")
 			for client := range ws.Clients {
-				log.Println("broadcasting")
 				err := client.WriteMessage(websocket.TextMessage, msg)
 				if err != nil {
 					log.Println("Error writing message:", err)
@@ -86,13 +84,6 @@ func (ws *Websocket) handleMessages() {
 		}
 	}
 }
-
-// func (ws *Websocket) handleServerInstanceMessages(msg []byte) {
-// 	// Process messages received from server instances
-// 	// This could involve updating the state, broadcasting to clients, etc.
-// 	// Here, we broadcast the message to connected clients
-// 	ws.Broadcast <- msg
-// }
 
 func ListenAndRunWebsocket(port string) {
 	log.Printf("Server list and serve at %s\n", port)
